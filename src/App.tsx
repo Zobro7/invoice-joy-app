@@ -19,7 +19,8 @@ const AppContent = () => {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Splash />} />
+        {/* <Route path="/" element={<Splash />} /> */}
+        <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
         <Route path="/history" element={<History />} />
         <Route path="/dashboard" element={<Dashboard />} />
