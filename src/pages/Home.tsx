@@ -6,11 +6,37 @@ import { Plus, ShoppingCart, User, Calculator, Wifi, Check } from "lucide-react"
 import { CalculatorKeypad } from "@/components/CalculatorKeypad";
 import { QuickActions } from "@/components/QuickActions";
 import { InvoiceCounter } from "@/components/InvoiceCounter";
+import { ProductSelector } from "@/components/ProductSelector";
+import { CustomerSelector } from "@/components/CustomerSelector";
+import { InvoiceGenerator } from "@/components/InvoiceGenerator";
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+}
 
 const Home = () => {
   const [currentAmount, setCurrentAmount] = useState("0");
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showProductSelector, setShowProductSelector] = useState(false);
+  const [showCustomerSelector, setShowCustomerSelector] = useState(false);
+  const [showInvoiceGenerator, setShowInvoiceGenerator] = useState(false);
   const [isOnline] = useState(true);
+  
+  // Invoice data
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [invoiceCount, setInvoiceCount] = useState(12);
 
   const handleKeypadInput = (value: string) => {
     if (value === "clear") {
@@ -35,6 +61,37 @@ const Home = () => {
     return `₹${num.toFixed(2)}`;
   };
 
+  const handleProductSelect = (product: Product) => {
+    setSelectedProducts([...selectedProducts, product]);
+    // Auto-update amount if it's just a single item
+    if (currentAmount === "0" || selectedProducts.length === 0) {
+      setCurrentAmount(product.price.toString());
+    }
+  };
+
+  const handleCustomerSelect = (customer: Customer) => {
+    setSelectedCustomer(customer);
+  };
+
+  const calculateTotalAmount = () => {
+    if (selectedProducts.length > 0) {
+      return selectedProducts.reduce((sum, product) => sum + product.price, 0);
+    }
+    return parseFloat(currentAmount) || 0;
+  };
+
+  const handleCreateInvoice = () => {
+    setShowInvoiceGenerator(true);
+  };
+
+  const handleInvoiceGenerated = () => {
+    setInvoiceCount(prev => prev + 1);
+    // Reset form
+    setSelectedProducts([]);
+    setSelectedCustomer(null);
+    setCurrentAmount("0");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Header */}
@@ -55,7 +112,7 @@ const Home = () => {
               </div>
             </div>
           </div>
-          <InvoiceCounter count={12} />
+          <InvoiceCounter count={invoiceCount} />
         </div>
       </div>
 
@@ -65,8 +122,18 @@ const Home = () => {
           <div className="text-center space-y-2">
             <p className="text-sm text-muted-foreground">Invoice Amount</p>
             <div className="text-4xl font-bold text-primary">
-              {formatAmount(currentAmount)}
+              {formatAmount(calculateTotalAmount().toString())}
             </div>
+            {selectedProducts.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {selectedProducts.length} product(s) selected
+              </div>
+            )}
+            {selectedCustomer && (
+              <div className="text-xs text-muted-foreground">
+                Customer: {selectedCustomer.name}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">Tap numbers or use quick actions</p>
           </div>
         </Card>
@@ -77,6 +144,7 @@ const Home = () => {
             variant="outline"
             size="lg"
             className="h-16 flex-col space-y-2"
+            onClick={() => setShowProductSelector(true)}
           >
             <Plus className="w-6 h-6" />
             <span className="text-sm">Add Product</span>
@@ -85,6 +153,7 @@ const Home = () => {
             variant="outline"
             size="lg"
             className="h-16 flex-col space-y-2"
+            onClick={() => setShowCustomerSelector(true)}
           >
             <User className="w-6 h-6" />
             <span className="text-sm">Select Customer</span>
@@ -99,7 +168,8 @@ const Home = () => {
           variant="floating"
           size="xl"
           className="w-full"
-          disabled={currentAmount === "0"}
+          disabled={calculateTotalAmount() === 0}
+          onClick={handleCreateInvoice}
         >
           <Calculator className="w-5 h-5" />
           Create Invoice
@@ -138,7 +208,35 @@ const Home = () => {
       {/* Quick Actions Modal */}
       <QuickActions 
         open={showQuickActions} 
-        onClose={() => setShowQuickActions(false)} 
+        onClose={() => setShowQuickActions(false)}
+        onAddProduct={() => setShowProductSelector(true)}
+        onAddCustomer={() => setShowCustomerSelector(true)}
+      />
+
+      {/* Product Selector */}
+      <ProductSelector
+        open={showProductSelector}
+        onClose={() => setShowProductSelector(false)}
+        onSelectProduct={handleProductSelect}
+      />
+
+      {/* Customer Selector */}
+      <CustomerSelector
+        open={showCustomerSelector}
+        onClose={() => setShowCustomerSelector(false)}
+        onSelectCustomer={handleCustomerSelect}
+      />
+
+      {/* Invoice Generator */}
+      <InvoiceGenerator
+        open={showInvoiceGenerator}
+        onClose={() => setShowInvoiceGenerator(false)}
+        invoiceData={{
+          products: selectedProducts,
+          customer: selectedCustomer,
+          amount: calculateTotalAmount()
+        }}
+        onGenerate={handleInvoiceGenerated}
       />
     </div>
   );

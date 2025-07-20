@@ -21,21 +21,29 @@ import {
 interface QuickActionsProps {
   open: boolean;
   onClose: () => void;
+  onAddProduct?: () => void;
+  onAddCustomer?: () => void;
 }
 
-export const QuickActions = ({ open, onClose }: QuickActionsProps) => {
+export const QuickActions = ({ open, onClose, onAddProduct, onAddCustomer }: QuickActionsProps) => {
   const quickActions = [
     {
       icon: ShoppingCart,
       title: "Quick Add Product",
       description: "Add a new product to your inventory",
-      action: () => console.log("Add product")
+      action: () => {
+        onAddProduct?.();
+        onClose();
+      }
     },
     {
       icon: User,
       title: "Quick Add Customer",
       description: "Add a new customer to your contacts",
-      action: () => console.log("Add customer")
+      action: () => {
+        onAddCustomer?.();
+        onClose();
+      }
     },
     {
       icon: FileText,
