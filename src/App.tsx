@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,12 +15,15 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const showBottomNav = location.pathname !== "/";
+  // Show bottom nav on all pages except splash (which is currently commented out)
+  const showBottomNav = location.pathname !== "/splash";
 
   return (
     <>
       <Routes>
-        <Route path="/" element={<Splash />} />
+        {/* Splash screen commented out - going directly to home */}
+        <Route path="/" element={<Home />} />
+        <Route path="/splash" element={<Splash />} />
         <Route path="/home" element={<Home />} />
         <Route path="/history" element={<History />} />
         <Route path="/dashboard" element={<Dashboard />} />
