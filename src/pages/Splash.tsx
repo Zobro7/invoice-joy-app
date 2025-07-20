@@ -15,7 +15,9 @@ const Splash = () => {
   }, []);
 
   const handleGetStarted = () => {
+    console.log("Get Started button clicked");
     localStorage.setItem("hasSeenSplash", "true");
+    console.log("Navigating to /home");
     navigate("/home");
   };
 
