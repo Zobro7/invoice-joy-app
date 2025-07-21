@@ -40,6 +40,9 @@ interface InvoiceData {
   products: Product[];
   customer: Customer | null;
   amount: number;
+  subtotal?: number;
+  gst?: number;
+  gstRate?: number;
 }
 
 interface InvoiceGeneratorProps {
@@ -146,15 +149,34 @@ Thank you for your business!`;
                     <div key={index} className="flex justify-between items-start">
                       <div className="flex-1">
                         <p className="font-medium">{product.name}</p>
-                        {product.description && (
-                          <p className="text-sm text-muted-foreground">{product.description}</p>
-                        )}
+                        <p className="text-sm text-muted-foreground">
+                          Qty: {(product as any).quantity || 1} × ₹{product.price.toFixed(2)}
+                        </p>
                       </div>
-                      <p className="font-medium">₹{product.price.toFixed(2)}</p>
+                      <p className="font-medium">
+                        ₹{(((product as any).quantity || 1) * product.price).toFixed(2)}
+                      </p>
                     </div>
                   ))}
                   
                   <Separator />
+                  
+                  {/* Subtotal, GST, and Total */}
+                  {invoiceData.subtotal && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span>Subtotal:</span>
+                        <span>₹{invoiceData.subtotal.toFixed(2)}</span>
+                      </div>
+                      {invoiceData.gst && invoiceData.gstRate && (
+                        <div className="flex justify-between items-center">
+                          <span>GST ({invoiceData.gstRate}%):</span>
+                          <span>₹{invoiceData.gst.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <Separator />
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center text-lg font-bold">
                     <span>Total:</span>

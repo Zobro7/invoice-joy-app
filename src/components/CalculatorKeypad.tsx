@@ -7,10 +7,10 @@ interface CalculatorKeypadProps {
 
 export const CalculatorKeypad = ({ onInput }: CalculatorKeypadProps) => {
   const keys = [
-    ["7", "8", "9"],
-    ["4", "5", "6"],
-    ["1", "2", "3"],
-    [".", "0", "⌫"]
+    ["7", "8", "9", "÷"],
+    ["4", "5", "6", "×"],
+    ["1", "2", "3", "-"],
+    [".", "0", "⌫", "+"]
   ];
 
   const handleKeyPress = (key: string) => {
@@ -23,10 +23,7 @@ export const CalculatorKeypad = ({ onInput }: CalculatorKeypadProps) => {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-muted-foreground text-center">
-        Enter Amount
-      </h3>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {keys.flat().map((key, index) => (
           <Button
             key={index}
@@ -35,6 +32,7 @@ export const CalculatorKeypad = ({ onInput }: CalculatorKeypadProps) => {
             onClick={() => handleKeyPress(key)}
             className={`
               ${key === "⌫" ? "bg-destructive/10 text-destructive hover:bg-destructive/20" : ""}
+              ${["+", "-", "×", "÷"].includes(key) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
               ${key === "." ? "bg-accent text-accent-foreground" : ""}
             `}
           >
@@ -55,7 +53,7 @@ export const CalculatorKeypad = ({ onInput }: CalculatorKeypadProps) => {
           className="flex-1"
           onClick={() => onInput("=")}
         >
-          Continue
+          Calculate
         </Button>
       </div>
     </div>
