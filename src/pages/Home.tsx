@@ -1,248 +1,377 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { 
+  Calculator, 
+  FileText, 
+  Plus,
+  Trash2,
+  Receipt
+} from "lucide-react";
 import { CalculatorKeypad } from "@/components/CalculatorKeypad";
 import { InvoiceGenerator } from "@/components/InvoiceGenerator";
-import { InvoiceCounter } from "@/components/InvoiceCounter";
-import { Calculator, FileText, Percent } from "lucide-react";
+
+interface TableRow {
+  item: string;
+  quantity: string;
+  price: string;
+  gst: string;
+}
 
 interface Product {
   id: string;
   name: string;
   quantity: number;
   price: number;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  company?: string;
+  gstRate?: number;
 }
 
 export const Home = () => {
-  const [invoiceText, setInvoiceText] = useState("");
+  const [showCalculator, setShowCalculator] = useState(false);
   const [calculatorDisplay, setCalculatorDisplay] = useState("0");
-  const [calculatorMode, setCalculatorMode] = useState(false);
-  const [gstRate, setGstRate] = useState("18");
-  const [showInvoiceGenerator, setShowInvoiceGenerator] = useState(false);
-  const [parsedInvoice, setParsedInvoice] = useState<{
-    products: Product[];
-    subtotal: number;
-    gst: number;
-    total: number;
-  } | null>(null);
-  const [invoiceCount, setInvoiceCount] = useState(42);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [fixedGstRate, setFixedGstRate] = useState(18);
+  const [isVaryingGst, setIsVaryingGst] = useState(false);
+  const [tableRows, setTableRows] = useState<TableRow[]>([
+    { item: "", quantity: "", price: "", gst: "" }
+  ]);
 
-  const exampleText = `Snickers 5 100
-Coca Cola 3 50
-Chips 2 75`;
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const handleKeypadInput = (value: string) => {
-    if (value === "clear") {
+  const addRow = () => {
+    setTableRows([...tableRows, { item: "", quantity: "", price: "", gst: "" }]);
+  };
+
+  const removeRow = (index: number) => {
+    if (tableRows.length > 1) {
+      const newRows = tableRows.filter((_, i) => i !== index);
+      setTableRows(newRows);
+    }
+  };
+
+  const updateRow = (index: number, field: keyof TableRow, value: string) => {
+    const newRows = [...tableRows];
+    newRows[index][field] = value;
+    setTableRows(newRows);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, rowIndex: number, colIndex: number) => {
+    if (e.key === ' ') {
+      e.preventDefault();
+      const nextColIndex = colIndex + 1;
+      const maxCols = isVaryingGst ? 4 : 3;
+      
+      if (nextColIndex < maxCols) {
+        const nextInputIndex = rowIndex * maxCols + nextColIndex;
+        inputRefs.current[nextInputIndex]?.focus();
+      } else if (rowIndex < tableRows.length - 1) {
+        const nextRowFirstInput = (rowIndex + 1) * maxCols;
+        inputRefs.current[nextRowFirstInput]?.focus();
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (rowIndex === tableRows.length - 1) {
+        addRow();
+        setTimeout(() => {
+          const newRowFirstInput = tableRows.length * (isVaryingGst ? 4 : 3);
+          inputRefs.current[newRowFirstInput]?.focus();
+        }, 0);
+      } else {
+        const nextRowFirstInput = (rowIndex + 1) * (isVaryingGst ? 4 : 3);
+        inputRefs.current[nextRowFirstInput]?.focus();
+      }
+    }
+  };
+
+  const getInputIndex = (rowIndex: number, colIndex: number) => {
+    const maxCols = isVaryingGst ? 4 : 3;
+    return rowIndex * maxCols + colIndex;
+  };
+
+  const calculateTotals = () => {
+    let subtotal = 0;
+    let totalGst = 0;
+
+    const products = tableRows
+      .filter(row => row.item.trim() && row.quantity.trim() && row.price.trim())
+      .map(row => {
+        const quantity = parseFloat(row.quantity) || 0;
+        const price = parseFloat(row.price) || 0;
+        const itemSubtotal = quantity * price;
+        
+        const gstRate = isVaryingGst ? (parseFloat(row.gst) || 0) : fixedGstRate;
+        const itemGst = (itemSubtotal * gstRate) / 100;
+        
+        subtotal += itemSubtotal;
+        totalGst += itemGst;
+
+        return {
+          id: Math.random().toString(),
+          name: row.item,
+          price: price,
+          quantity: quantity,
+          gstRate: gstRate
+        };
+      });
+
+    return {
+      products,
+      subtotal,
+      gst: totalGst,
+      total: subtotal + totalGst
+    };
+  };
+
+  const totals = calculateTotals();
+
+  const handleCalculatorAction = (action: string) => {
+    if (action === "clear") {
       setCalculatorDisplay("0");
-    } else if (value === "backspace") {
+    } else if (action === "backspace") {
       setCalculatorDisplay(prev => prev.length > 1 ? prev.slice(0, -1) : "0");
-    } else if (value === "=") {
+    } else if (action === "=") {
       try {
         const result = eval(calculatorDisplay.replace(/×/g, '*').replace(/÷/g, '/'));
         setCalculatorDisplay(result.toString());
       } catch {
         setCalculatorDisplay("Error");
       }
-    } else if (["+", "-", "×", "÷"].includes(value)) {
-      setCalculatorDisplay(prev => prev + " " + value + " ");
+    } else if (["+", "-", "×", "÷"].includes(action)) {
+      if (calculatorDisplay !== "0" && !calculatorDisplay.endsWith(" ")) {
+        setCalculatorDisplay(calculatorDisplay + " " + action + " ");
+      }
     } else {
-      setCalculatorDisplay(prev => {
-        if (prev === "0" && value !== ".") {
-          return value;
-        }
-        return prev + value;
-      });
+      if (calculatorDisplay === "0" || calculatorDisplay === "Error") {
+        setCalculatorDisplay(action);
+      } else {
+        setCalculatorDisplay(calculatorDisplay + action);
+      }
     }
   };
 
-  const parseInvoiceText = (text: string) => {
-    const lines = text.trim().split('\n').filter(line => line.trim());
-    const products: Product[] = [];
-    
-    lines.forEach((line, index) => {
-      const parts = line.trim().split(/\s+/);
-      if (parts.length >= 3) {
-        const quantity = parseInt(parts[parts.length - 2]);
-        const price = parseFloat(parts[parts.length - 1]);
-        const name = parts.slice(0, -2).join(' ');
-        
-        if (!isNaN(quantity) && !isNaN(price) && name) {
-          products.push({
-            id: `product-${index}`,
-            name,
-            quantity,
-            price
-          });
-        }
-      }
-    });
-
-    const subtotal = products.reduce((sum, product) => sum + (product.quantity * product.price), 0);
-    const gstAmount = (subtotal * parseFloat(gstRate)) / 100;
-    const total = subtotal + gstAmount;
-
-    return {
-      products,
-      subtotal,
-      gst: gstAmount,
-      total
-    };
+  const generateInvoice = () => {
+    if (totals.products.length === 0) return;
+    setShowInvoice(true);
   };
 
-  const handleSubmitInvoice = () => {
-    if (!invoiceText.trim()) return;
-    
-    const parsed = parseInvoiceText(invoiceText);
-    setParsedInvoice(parsed);
-    setShowInvoiceGenerator(true);
-  };
-
-  const handleInvoiceGenerated = () => {
-    setInvoiceText("");
-    setParsedInvoice(null);
-    setShowInvoiceGenerator(false);
-    setInvoiceCount(prev => prev + 1);
+  const handleInvoiceGenerate = () => {
+    console.log("Invoice generated!");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Create Invoice</h1>
-          <p className="text-sm text-muted-foreground">Enter items in simple format</p>
+    <div className="min-h-screen bg-gradient-subtle p-4 pb-20">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Quick Invoice
+          </h1>
+          <p className="text-muted-foreground">Enter items to create professional invoices</p>
         </div>
-        <InvoiceCounter count={invoiceCount} />
-      </div>
 
-      {/* Onboarding Example */}
-      <Card className="mb-6 border-primary/20 bg-primary/5 backdrop-blur-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center">
-            <FileText className="w-5 h-5 mr-2 text-primary" />
-            How it works
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Format: Item Quantity Price</p>
-            <div className="bg-muted/50 p-3 rounded-lg font-mono text-sm">
-              <div>Snickers 5 100</div>
-              <div>Coca Cola 3 50</div>
-              <div>Chips 2 75</div>
-            </div>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span>Calculation:</span>
-            <span>(5×100) + (3×50) + (2×75) = ₹800</span>
-          </div>
-          <div className="flex justify-between items-center text-sm border-t pt-2">
-            <span>+ GST ({gstRate}%):</span>
-            <span>₹{((800 * parseFloat(gstRate)) / 100).toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between items-center font-semibold">
-            <span>Total:</span>
-            <span className="text-primary">₹{(800 + (800 * parseFloat(gstRate)) / 100).toFixed(2)}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Invoice Input */}
-      <Card className="mb-6 border-accent/20 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Enter Invoice Items</CardTitle>
-            <div className="flex items-center space-x-2">
-              <Percent className="w-4 h-4 text-muted-foreground" />
-              <Select value={gstRate} onValueChange={setGstRate}>
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">0%</SelectItem>
-                  <SelectItem value="5">5%</SelectItem>
-                  <SelectItem value="12">12%</SelectItem>
-                  <SelectItem value="18">18%</SelectItem>
-                  <SelectItem value="28">28%</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Enter items like: Snickers 5 100"
-            value={invoiceText}
-            onChange={(e) => setInvoiceText(e.target.value)}
-            className="min-h-[120px] font-mono"
-          />
-          <Button 
-            onClick={handleSubmitInvoice}
-            className="w-full"
-            disabled={!invoiceText.trim()}
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            Generate Invoice
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Calculator Toggle */}
-      <div className="flex items-center justify-center mb-4">
-        <Button
-          variant="outline"
-          onClick={() => setCalculatorMode(!calculatorMode)}
-          className="w-full"
-        >
-          <Calculator className="w-4 h-4 mr-2" />
-          {calculatorMode ? "Hide Calculator" : "Show Calculator"}
-        </Button>
-      </div>
-
-      {/* Calculator */}
-      {calculatorMode && (
-        <Card className="mb-6 border-accent/20 bg-card/80 backdrop-blur-sm">
+        {/* GST Settings */}
+        <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Calculator</CardTitle>
+            <CardTitle className="text-lg flex items-center space-x-2">
+              <Receipt className="w-5 h-5 text-primary" />
+              <span>GST Settings</span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="text-right text-2xl font-mono font-semibold">
-                {calculatorDisplay}
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="varying-gst">Varying GST Rates</Label>
+                <p className="text-sm text-muted-foreground">
+                  {isVaryingGst ? "Set GST rate for each item" : "Use fixed GST rate for all items"}
+                </p>
               </div>
+              <Switch
+                id="varying-gst"
+                checked={isVaryingGst}
+                onCheckedChange={setIsVaryingGst}
+              />
             </div>
-            <CalculatorKeypad onInput={handleKeypadInput} />
+
+            {!isVaryingGst && (
+              <div className="space-y-2">
+                <Label>Fixed GST Rate</Label>
+                <Select value={fixedGstRate.toString()} onValueChange={(value) => setFixedGstRate(parseInt(value))}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">0%</SelectItem>
+                    <SelectItem value="5">5%</SelectItem>
+                    <SelectItem value="12">12%</SelectItem>
+                    <SelectItem value="18">18%</SelectItem>
+                    <SelectItem value="28">28%</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
 
-      {/* Invoice Generator Modal */}
-      {parsedInvoice && (
-        <InvoiceGenerator
-          open={showInvoiceGenerator}
-          onClose={() => setShowInvoiceGenerator(false)}
-          invoiceData={{
-            products: parsedInvoice.products,
-            customer: null,
-            amount: parsedInvoice.total,
-            subtotal: parsedInvoice.subtotal,
-            gst: parsedInvoice.gst,
-            gstRate: parseFloat(gstRate)
-          }}
-          onGenerate={handleInvoiceGenerated}
-        />
-      )}
+        {/* Invoice Table */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-5 h-5 text-primary" />
+                <span>Invoice Items</span>
+              </div>
+              <Button onClick={addRow} size="sm" variant="outline">
+                <Plus className="w-4 h-4" />
+                Add Row
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Table Headers */}
+              <div className={`grid gap-4 font-medium text-sm text-muted-foreground ${
+                isVaryingGst ? 'grid-cols-5' : 'grid-cols-4'
+              }`}>
+                <span>Item Name</span>
+                <span>Quantity</span>
+                <span>Unit Price (₹)</span>
+                {isVaryingGst && <span>GST Rate (%)</span>}
+                <span>Action</span>
+              </div>
+
+              {/* Table Rows */}
+              <div className="space-y-3">
+                {tableRows.map((row, rowIndex) => (
+                  <div key={rowIndex} className={`grid gap-4 items-center ${
+                    isVaryingGst ? 'grid-cols-5' : 'grid-cols-4'
+                  }`}>
+                    <Input
+                      ref={(el) => inputRefs.current[getInputIndex(rowIndex, 0)] = el}
+                      placeholder="Item name"
+                      value={row.item}
+                      onChange={(e) => updateRow(rowIndex, 'item', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
+                    />
+                    <Input
+                      ref={(el) => inputRefs.current[getInputIndex(rowIndex, 1)] = el}
+                      placeholder="Qty"
+                      type="number"
+                      value={row.quantity}
+                      onChange={(e) => updateRow(rowIndex, 'quantity', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, rowIndex, 1)}
+                    />
+                    <Input
+                      ref={(el) => inputRefs.current[getInputIndex(rowIndex, 2)] = el}
+                      placeholder="Price"
+                      type="number"
+                      step="0.01"
+                      value={row.price}
+                      onChange={(e) => updateRow(rowIndex, 'price', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, rowIndex, 2)}
+                    />
+                    {isVaryingGst && (
+                      <Input
+                        ref={(el) => inputRefs.current[getInputIndex(rowIndex, 3)] = el}
+                        placeholder="GST %"
+                        type="number"
+                        step="0.01"
+                        value={row.gst}
+                        onChange={(e) => updateRow(rowIndex, 'gst', e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, rowIndex, 3)}
+                      />
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeRow(rowIndex)}
+                      disabled={tableRows.length === 1}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Summary */}
+              {totals.products.length > 0 && (
+                <div className="border-t pt-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>₹{totals.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>GST:</span>
+                    <span>₹{totals.gst.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total:</span>
+                    <span className="text-primary">₹{totals.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="flex space-x-4">
+          <Button
+            variant="floating"
+            size="lg"
+            className="flex-1"
+            onClick={generateInvoice}
+            disabled={totals.products.length === 0}
+          >
+            <FileText className="w-5 h-5" />
+            Generate Invoice
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setShowCalculator(!showCalculator)}
+          >
+            <Calculator className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Calculator */}
+        {showCalculator && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Calculator</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-background border rounded-lg p-4 text-right text-2xl font-mono min-h-[60px] flex items-center justify-end">
+                  {calculatorDisplay}
+                </div>
+                <CalculatorKeypad onInput={handleCalculatorAction} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Invoice Generator */}
+      <InvoiceGenerator
+        open={showInvoice}
+        onClose={() => setShowInvoice(false)}
+        invoiceData={{
+          products: totals.products,
+          customer: null,
+          amount: totals.total,
+          subtotal: totals.subtotal,
+          gst: totals.gst,
+          gstRate: isVaryingGst ? undefined : fixedGstRate
+        }}
+        onGenerate={handleInvoiceGenerate}
+      />
     </div>
   );
 };
