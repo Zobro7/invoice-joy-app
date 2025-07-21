@@ -145,17 +145,31 @@ Thank you for your business!`;
                   <h4 className="font-medium">Items:</h4>
                 </div>
                 <div className="space-y-3">
+                  {/* Headers */}
+                  <div className="grid grid-cols-4 gap-2 pb-2 border-b text-sm font-medium text-muted-foreground">
+                    <span>Item</span>
+                    <span className="text-center">Qty</span>
+                    <span className="text-center">Unit Price</span>
+                    <span className="text-right">Total</span>
+                  </div>
+                  
+                  {/* Items */}
                   {invoiceData.products.map((product, index) => (
-                    <div key={index} className="flex justify-between items-start">
-                      <div className="flex-1">
+                    <div key={index} className="grid grid-cols-4 gap-2 items-center">
+                      <div>
                         <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Qty: {(product as any).quantity || 1} × ₹{product.price.toFixed(2)}
+                      </div>
+                      <div className="text-center">
+                        <p>{(product as any).quantity || 1}</p>
+                      </div>
+                      <div className="text-center">
+                        <p>₹{product.price.toFixed(2)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">
+                          ₹{(((product as any).quantity || 1) * product.price).toFixed(2)}
                         </p>
                       </div>
-                      <p className="font-medium">
-                        ₹{(((product as any).quantity || 1) * product.price).toFixed(2)}
-                      </p>
                     </div>
                   ))}
                   
