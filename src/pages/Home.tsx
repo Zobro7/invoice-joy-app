@@ -5,11 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Calculator, 
   FileText, 
   Plus,
-  Trash2,
   Receipt
 } from "lucide-react";
 import { CalculatorKeypad } from "@/components/CalculatorKeypad";
@@ -339,28 +339,26 @@ export const Home = () => {
           <Button
             variant="outline"
             size="lg"
-            onClick={() => setShowCalculator(!showCalculator)}
+            onClick={() => setShowCalculator(true)}
           >
             <Calculator className="w-5 h-5" />
           </Button>
         </div>
 
-        {/* Calculator */}
-        {showCalculator && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Calculator</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-background border rounded-lg p-4 text-right text-2xl font-mono min-h-[60px] flex items-center justify-end">
-                  {calculatorDisplay}
-                </div>
-                <CalculatorKeypad onInput={handleCalculatorAction} />
+        {/* Calculator Dialog */}
+        <Dialog open={showCalculator} onOpenChange={setShowCalculator}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Calculator</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-background border rounded-lg p-4 text-right text-2xl font-mono min-h-[60px] flex items-center justify-end">
+                {calculatorDisplay}
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <CalculatorKeypad onInput={handleCalculatorAction} />
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Invoice Generator */}
