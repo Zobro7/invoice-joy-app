@@ -73,32 +73,33 @@ export const Home = () => {
     if (e.key === ' ') {
       e.preventDefault();
       const nextColIndex = colIndex + 1;
-      const maxCols = isVaryingGst ? 3 : 2;
+      const maxCols = isVaryingGst ? 4 : 3;
       
-      if (nextColIndex <= maxCols) {
-        const nextInputIndex = rowIndex * (isVaryingGst ? 3 : 2) + nextColIndex;
+      if (nextColIndex < maxCols) {
+        const nextInputIndex = rowIndex * maxCols + nextColIndex;
         inputRefs.current[nextInputIndex]?.focus();
       } else if (rowIndex < tableRows.length - 1) {
-        const nextRowFirstInput = (rowIndex + 1) * (isVaryingGst ? 3 : 2);
+        const nextRowFirstInput = (rowIndex + 1) * maxCols;
         inputRefs.current[nextRowFirstInput]?.focus();
       }
     } else if (e.key === 'Enter') {
       e.preventDefault();
+      const maxCols = isVaryingGst ? 4 : 3;
       if (rowIndex === tableRows.length - 1) {
         addRow();
         setTimeout(() => {
-          const newRowFirstInput = tableRows.length * (isVaryingGst ? 3 : 2);
+          const newRowFirstInput = tableRows.length * maxCols;
           inputRefs.current[newRowFirstInput]?.focus();
         }, 0);
       } else {
-        const nextRowFirstInput = (rowIndex + 1) * (isVaryingGst ? 3 : 2);
+        const nextRowFirstInput = (rowIndex + 1) * maxCols;
         inputRefs.current[nextRowFirstInput]?.focus();
       }
     }
   };
 
   const getInputIndex = (rowIndex: number, colIndex: number) => {
-    const maxCols = isVaryingGst ? 3 : 2;
+    const maxCols = isVaryingGst ? 4 : 3;
     return rowIndex * maxCols + colIndex;
   };
 
@@ -243,10 +244,10 @@ export const Home = () => {
           <CardContent>
             <div className="space-y-4">
               {/* Table Headers */}
-              <div className={`grid gap-4 font-medium text-sm text-muted-foreground ${
+              <div className={`grid gap-2 font-medium text-sm text-muted-foreground ${
                 isVaryingGst ? 'grid-cols-4' : 'grid-cols-3'
               }`}>
-                <span className="col-span-2">Item</span>
+                <span>Item</span>
                 <span>Qty</span>
                 <span>Price (₹)</span>
                 {isVaryingGst && <span>GST (%)</span>}
@@ -255,7 +256,7 @@ export const Home = () => {
               {/* Table Rows */}
               <div className="space-y-3">
                 {tableRows.map((row, rowIndex) => (
-                  <div key={rowIndex} className={`grid gap-4 items-center ${
+                  <div key={rowIndex} className={`grid gap-2 items-center ${
                     isVaryingGst ? 'grid-cols-4' : 'grid-cols-3'
                   }`}>
                     <Input
@@ -264,7 +265,7 @@ export const Home = () => {
                       value={row.item}
                       onChange={(e) => updateRow(rowIndex, 'item', e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
-                      className={`col-span-2 ${!validateField('item', row.item) && row.item.length > 0 ? 'border-destructive' : ''}`}
+                      className={`${!validateField('item', row.item) && row.item.length > 0 ? 'border-destructive' : ''}`}
                     />
                     <Input
                       ref={(el) => inputRefs.current[getInputIndex(rowIndex, 1)] = el}
