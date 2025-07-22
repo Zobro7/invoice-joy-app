@@ -37,6 +37,8 @@ export const Home = () => {
   const [fixedGstRate, setFixedGstRate] = useState(18);
   const [isVaryingGst, setIsVaryingGst] = useState(false);
   const [tableRows, setTableRows] = useState<TableRow[]>([
+    { item: "", quantity: "", price: "", gst: "" },
+    { item: "", quantity: "", price: "", gst: "" },
     { item: "", quantity: "", price: "", gst: "" }
   ]);
 
@@ -46,10 +48,18 @@ export const Home = () => {
     setTableRows([...tableRows, { item: "", quantity: "", price: "", gst: "" }]);
   };
 
-  const removeRow = (index: number) => {
-    if (tableRows.length > 1) {
-      const newRows = tableRows.filter((_, i) => i !== index);
-      setTableRows(newRows);
+  const validateField = (field: keyof TableRow, value: string): boolean => {
+    switch (field) {
+      case 'item':
+        return value.trim().length > 0;
+      case 'quantity':
+        return !isNaN(parseFloat(value)) && parseFloat(value) > 0;
+      case 'price':
+        return !isNaN(parseFloat(value)) && parseFloat(value) >= 0;
+      case 'gst':
+        return !isNaN(parseFloat(value)) && parseFloat(value) >= 0 && parseFloat(value) <= 100;
+      default:
+        return true;
     }
   };
 
@@ -63,13 +73,13 @@ export const Home = () => {
     if (e.key === ' ') {
       e.preventDefault();
       const nextColIndex = colIndex + 1;
-      const maxCols = isVaryingGst ? 4 : 3;
+      const maxCols = isVaryingGst ? 3 : 2;
       
-      if (nextColIndex < maxCols) {
-        const nextInputIndex = rowIndex * maxCols + nextColIndex;
+      if (nextColIndex <= maxCols) {
+        const nextInputIndex = rowIndex * (isVaryingGst ? 3 : 2) + nextColIndex;
         inputRefs.current[nextInputIndex]?.focus();
       } else if (rowIndex < tableRows.length - 1) {
-        const nextRowFirstInput = (rowIndex + 1) * maxCols;
+        const nextRowFirstInput = (rowIndex + 1) * (isVaryingGst ? 3 : 2);
         inputRefs.current[nextRowFirstInput]?.focus();
       }
     } else if (e.key === 'Enter') {
@@ -77,18 +87,18 @@ export const Home = () => {
       if (rowIndex === tableRows.length - 1) {
         addRow();
         setTimeout(() => {
-          const newRowFirstInput = tableRows.length * (isVaryingGst ? 4 : 3);
+          const newRowFirstInput = tableRows.length * (isVaryingGst ? 3 : 2);
           inputRefs.current[newRowFirstInput]?.focus();
         }, 0);
       } else {
-        const nextRowFirstInput = (rowIndex + 1) * (isVaryingGst ? 4 : 3);
+        const nextRowFirstInput = (rowIndex + 1) * (isVaryingGst ? 3 : 2);
         inputRefs.current[nextRowFirstInput]?.focus();
       }
     }
   };
 
   const getInputIndex = (rowIndex: number, colIndex: number) => {
-    const maxCols = isVaryingGst ? 4 : 3;
+    const maxCols = isVaryingGst ? 3 : 2;
     return rowIndex * maxCols + colIndex;
   };
 
@@ -234,27 +244,27 @@ export const Home = () => {
             <div className="space-y-4">
               {/* Table Headers */}
               <div className={`grid gap-4 font-medium text-sm text-muted-foreground ${
-                isVaryingGst ? 'grid-cols-5' : 'grid-cols-4'
+                isVaryingGst ? 'grid-cols-4' : 'grid-cols-3'
               }`}>
-                <span>Item Name</span>
-                <span>Quantity</span>
-                <span>Unit Price (₹)</span>
-                {isVaryingGst && <span>GST Rate (%)</span>}
-                <span>Action</span>
+                <span className="col-span-2">Item</span>
+                <span>Qty</span>
+                <span>Price (₹)</span>
+                {isVaryingGst && <span>GST (%)</span>}
               </div>
 
               {/* Table Rows */}
               <div className="space-y-3">
                 {tableRows.map((row, rowIndex) => (
                   <div key={rowIndex} className={`grid gap-4 items-center ${
-                    isVaryingGst ? 'grid-cols-5' : 'grid-cols-4'
+                    isVaryingGst ? 'grid-cols-4' : 'grid-cols-3'
                   }`}>
                     <Input
                       ref={(el) => inputRefs.current[getInputIndex(rowIndex, 0)] = el}
-                      placeholder="Item name"
+                      placeholder="Enter item name"
                       value={row.item}
                       onChange={(e) => updateRow(rowIndex, 'item', e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
+                      className={`col-span-2 ${!validateField('item', row.item) && row.item.length > 0 ? 'border-destructive' : ''}`}
                     />
                     <Input
                       ref={(el) => inputRefs.current[getInputIndex(rowIndex, 1)] = el}
@@ -263,6 +273,7 @@ export const Home = () => {
                       value={row.quantity}
                       onChange={(e) => updateRow(rowIndex, 'quantity', e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, rowIndex, 1)}
+                      className={`${!validateField('quantity', row.quantity) && row.quantity.length > 0 ? 'border-destructive' : ''}`}
                     />
                     <Input
                       ref={(el) => inputRefs.current[getInputIndex(rowIndex, 2)] = el}
@@ -272,6 +283,7 @@ export const Home = () => {
                       value={row.price}
                       onChange={(e) => updateRow(rowIndex, 'price', e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, rowIndex, 2)}
+                      className={`${!validateField('price', row.price) && row.price.length > 0 ? 'border-destructive' : ''}`}
                     />
                     {isVaryingGst && (
                       <Input
@@ -282,17 +294,9 @@ export const Home = () => {
                         value={row.gst}
                         onChange={(e) => updateRow(rowIndex, 'gst', e.target.value)}
                         onKeyDown={(e) => handleKeyDown(e, rowIndex, 3)}
+                        className={`${!validateField('gst', row.gst) && row.gst.length > 0 ? 'border-destructive' : ''}`}
                       />
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeRow(rowIndex)}
-                      disabled={tableRows.length === 1}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 ))}
               </div>
